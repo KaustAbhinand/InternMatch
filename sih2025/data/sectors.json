@@ -1,0 +1,62 @@
+[
+  {
+    "id": "technology",
+    "name": "Technology",
+    "description": "Software development, digital marketing, IT services",
+    "keywords": ["tech", "software", "digital", "IT", "computer", "programming", "coding"]
+  },
+  {
+    "id": "government",
+    "name": "Government",
+    "description": "Public sector, policy making, administration",
+    "keywords": ["government", "public", "policy", "administration", "ministry", "public sector"]
+  },
+  {
+    "id": "healthcare",
+    "name": "Healthcare",
+    "description": "Medical, public health, healthcare services",
+    "keywords": ["health", "medical", "healthcare", "medicine", "public health", "hospital"]
+  },
+  {
+    "id": "education",
+    "name": "Education",
+    "description": "Teaching, educational technology, academic research",
+    "keywords": ["education", "teaching", "school", "college", "academic", "learning", "student"]
+  },
+  {
+    "id": "environment",
+    "name": "Environment",
+    "description": "Environmental conservation, sustainability, climate action",
+    "keywords": ["environment", "conservation", "sustainability", "climate", "green", "ecology"]
+  },
+  {
+    "id": "finance",
+    "name": "Finance",
+    "description": "Banking, financial services, economic development",
+    "keywords": ["finance", "banking", "economic", "financial", "money", "investment"]
+  },
+  {
+    "id": "social_work",
+    "name": "Social Work",
+    "description": "Community development, social services, NGO work",
+    "keywords": ["social", "community", "NGO", "development", "welfare", "social work"]
+  },
+  {
+    "id": "agriculture",
+    "name": "Agriculture",
+    "description": "Farming, agricultural technology, rural development",
+    "keywords": ["agriculture", "farming", "rural", "crop", "farmer", "agricultural"]
+  },
+  {
+    "id": "tourism",
+    "name": "Tourism",
+    "description": "Travel, hospitality, cultural heritage",
+    "keywords": ["tourism", "travel", "hospitality", "heritage", "cultural", "tourism"]
+  },
+  {
+    "id": "culture",
+    "name": "Culture",
+    "description": "Arts, heritage, cultural preservation",
+    "keywords": ["culture", "arts", "heritage", "cultural", "art", "traditional"]
+  }
+]
