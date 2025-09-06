@@ -1,4 +1,4 @@
-# PM Internship Scheme - AI Recommendation Engine
+# InternMatch - PM Internship Scheme AI Recommendation Engine
 
 A lightweight AI-based recommendation engine that suggests relevant internships to candidates based on their profile, academic background, interests, and location preferences. Designed specifically for first-generation learners and candidates from rural areas with limited digital exposure.
 
