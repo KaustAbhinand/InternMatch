@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Internship Scheme - Career Goals</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <h1>PM Internship Scheme</h1>
+            </div>
+            <p class="subtitle">Set Your Career Goals & Get Skill Requirements</p>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="profile-nav">
+            <a href="/" class="nav-link">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <a href="/profile" class="nav-link">
+                <i class="fas fa-user"></i> Profile
+            </a>
+            <a href="/recommendations" class="nav-link">
+                <i class="fas fa-briefcase"></i> Recommendations
+            </a>
+            <a href="/goals" class="nav-link active">
+                <i class="fas fa-bullseye"></i> Career Goals
+            </a>
+        </nav>
+
+        <!-- Goals Form -->
+        <div class="goals-container">
+            <div class="goals-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-bullseye"></i> Set Your Career Goal</h2>
+                    <p>Choose your target job role to get market-based skill requirements and learning path</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="career_goal">
+                        <i class="fas fa-bullseye"></i>
+                        Target Job Role *
+                    </label>
+                    <select id="career_goal" name="career_goal" required>
+                        <option value="">Select your career goal</option>
+                        <option value="Software Developer">Software Developer</option>
+                        <option value="Data Analyst">Data Analyst</option>
+                        <option value="Digital Marketer">Digital Marketer</option>
+                        <option value="Project Manager">Project Manager</option>
+                        <option value="UI/UX Designer">UI/UX Designer</option>
+                        <option value="Business Analyst">Business Analyst</option>
+                        <option value="Content Writer">Content Writer</option>
+                        <option value="Social Media Manager">Social Media Manager</option>
+                        <option value="Research Analyst">Research Analyst</option>
+                        <option value="Government Officer">Government Officer</option>
+                        <option value="Healthcare Professional">Healthcare Professional</option>
+                        <option value="Education Specialist">Education Specialist</option>
+                        <option value="Environmental Consultant">Environmental Consultant</option>
+                        <option value="Financial Advisor">Financial Advisor</option>
+                        <option value="Agriculture Specialist">Agriculture Specialist</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="goal_description">
+                        <i class="fas fa-edit"></i>
+                        Additional Details (Optional)
+                    </label>
+                    <textarea id="goal_description" name="goal_description" 
+                              placeholder="Describe your specific career aspirations, target companies, or any additional context..."></textarea>
+                </div>
+
+                <button type="button" id="analyzeGoalBtn" class="btn-primary">
+                    <i class="fas fa-search"></i> Analyze Goal Requirements
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="goalResults" class="goal-results" style="display: none;">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Market Analysis & Requirements</h2>
+                    <p>Based on current internship market data</p>
+                </div>
+
+                <!-- Market Analysis -->
+                <div class="market-analysis">
+                    <h3><i class="fas fa-chart-bar"></i> Market Overview</h3>
+                    <div class="market-stats">
+                        <div class="stat">
+                            <strong id="totalInternships">0</strong>
+                            <span>Total Internships Analyzed</span>
+                        </div>
+                        <div class="stat">
+                            <strong id="highDemandSkills">0</strong>
+                            <span>High-Demand Skills</span>
+                        </div>
+                        <div class="stat">
+                            <strong id="avgMatchScore">0%</strong>
+                            <span>Average Match Score</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Required Skills -->
+                <div class="required-skills-section">
+                    <h3><i class="fas fa-tools"></i> Required Skills</h3>
+                    <div id="requiredSkills" class="required-skills"></div>
+                    <button type="button" id="addAllSkillsBtn" class="btn-secondary">
+                        <i class="fas fa-plus"></i> Add All Skills to Profile
+                    </button>
+                </div>
+
+                <!-- Learning Path -->
+                <div class="learning-path-section">
+                    <h3><i class="fas fa-graduation-cap"></i> Learning Path</h3>
+                    <div id="learningSteps" class="learning-steps"></div>
+                </div>
+
+                <!-- Skill Gap Analysis -->
+                <div class="skill-gap-section">
+                    <h3><i class="fas fa-chart-pie"></i> Your Skill Gap Analysis</h3>
+                    <div id="skillGapAnalysis" class="skill-gap-analysis"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="goal-actions">
+                    <button type="button" id="saveGoalBtn" class="btn-primary">
+                        <i class="fas fa-save"></i> Save Goal & Requirements
+                    </button>
+                    <button type="button" id="getRecommendationsBtn" class="btn-secondary">
+                        <i class="fas fa-briefcase"></i> Find Matching Internships
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing market data and requirements...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/goals.js') }}"></script>
+</body>
+</html>
