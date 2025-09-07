@@ -14,6 +14,15 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSectors();
     loadSkills();
     initializeEventListeners();
+    
+    // Add smooth entrance animation
+    setTimeout(() => {
+        document.querySelector('.header').style.opacity = '1';
+        document.querySelector('.header').style.transform = 'translateY(0)';
+    }, 100);
+    
+    // Add method card hover effects
+    addMethodCardEffects();
 });
 
 // Load sectors from API
@@ -197,10 +206,12 @@ function prevStep() {
 // Store step history for proper navigation
 let stepHistory = [1];
 
-function navigateToStep(step) {
+function navigateToStep(step, addToHistory = false) {
     if (step >= 1 && step <= totalSteps) {
         currentStep = step;
-        stepHistory.push(step);
+        if (addToHistory) {
+            stepHistory.push(step);
+        }
         updateStepDisplay();
     }
 }
@@ -209,6 +220,11 @@ function goBack() {
     if (stepHistory.length > 1) {
         stepHistory.pop(); // Remove current step
         currentStep = stepHistory[stepHistory.length - 1]; // Go to previous step
+        updateStepDisplay();
+    } else {
+        // If no history, go to step 1
+        currentStep = 1;
+        stepHistory = [1];
         updateStepDisplay();
     }
 }
@@ -221,7 +237,10 @@ function updateStepDisplay() {
     });
     
     // Show current step
-    document.getElementById(`step${currentStep}`).classList.add('active');
+    const currentStepElement = document.getElementById(`step${currentStep}`);
+    if (currentStepElement) {
+        currentStepElement.classList.add('active');
+    }
     
     // Update progress bar
     document.querySelectorAll('.progress-step').forEach((step, index) => {
@@ -237,14 +256,16 @@ function updateStepDisplay() {
     const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
     
-    prevBtn.style.display = currentStep > 1 ? 'block' : 'none';
+    if (prevBtn) {
+        prevBtn.style.display = currentStep > 1 ? 'block' : 'none';
+    }
     
     if (currentStep === totalSteps) {
-        nextBtn.style.display = 'none';
-        submitBtn.style.display = 'block';
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (submitBtn) submitBtn.style.display = 'block';
     } else {
-        nextBtn.style.display = 'block';
-        submitBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'block';
+        if (submitBtn) submitBtn.style.display = 'none';
     }
     
     // Validate current step
@@ -321,7 +342,7 @@ async function submitForm(e) {
             career_goal: document.getElementById('career_goal').value,
             location_preference: document.getElementById('location_preference').value,
             remote_work_preference: document.getElementById('remote_work_preference').checked,
-            num_recommendations: 5
+            num_recommendations: parseInt(document.getElementById('num_recommendations').value) || 20
         };
         
         // Get recommendations
@@ -469,7 +490,42 @@ async function showGoalRequirements(goal) {
         
     } catch (error) {
         console.error('Error loading goal requirements:', error);
-        requiredSkillsDiv.innerHTML = '<div class="error-text">Error loading market data. Please try again.</div>';
+        requiredSkillsDiv.innerHTML = '<div class="error-text">Unable to load market data. Using general recommendations instead.</div>';
+        
+        // Try to use fallback data
+        try {
+            const fallbackData = getFallbackGoalRequirements(goal);
+            
+            // Show required skills with fallback data
+            requiredSkillsDiv.innerHTML = '';
+            fallbackData.skills.forEach(skill => {
+                const skillTag = document.createElement('div');
+                skillTag.className = 'skill-tag goal-skill';
+                skillTag.innerHTML = `
+                    ${skill}
+                    <button type="button" class="add-skill-btn" onclick="addSkill('${skill}')">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                `;
+                requiredSkillsDiv.appendChild(skillTag);
+            });
+            
+            // Show learning path with fallback data
+            learningStepsDiv.innerHTML = '';
+            fallbackData.learningPath.forEach((step, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'learning-step';
+                stepDiv.innerHTML = `
+                    <div class="step-number">${index + 1}</div>
+                    <div class="step-content">${step}</div>
+                `;
+                learningStepsDiv.appendChild(stepDiv);
+            });
+            
+        } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            requiredSkillsDiv.innerHTML = '<div class="error-text">Unable to load goal requirements. Please try again later.</div>';
+        }
     }
 }
 
@@ -489,6 +545,18 @@ async function getGoalRequirements(goal) {
         });
         
         const data = await response.json();
+        
+        // Check if API returned an error with fallback flag
+        if (data.error && data.fallback) {
+            console.warn('API error, using fallback data:', data.error);
+            return getFallbackGoalRequirements(goal);
+        }
+        
+        // Check if response is not ok
+        if (!response.ok) {
+            throw new Error(data.error || 'API request failed');
+        }
+        
         return data;
     } catch (error) {
         console.error('Error fetching goal requirements:', error);
@@ -597,16 +665,18 @@ function getFallbackGoalRequirements(goal) {
 function selectInputMethod(method) {
     inputMethod = method;
     
+    // Add visual feedback
+    const methodCards = document.querySelectorAll('.method-card');
+    methodCards.forEach(card => card.classList.remove('selected'));
+    
     if (method === 'manual') {
+        document.getElementById('manualMethod').classList.add('selected');
         // Go to manual profile step
-        currentStep = 2;
-        stepHistory = [1, 2];
-        updateStepDisplay();
+        navigateToStep(2, true);
     } else if (method === 'resume') {
+        document.getElementById('resumeMethod').classList.add('selected');
         // Go to resume upload step
-        currentStep = 2;
-        stepHistory = [1, 2];
-        updateStepDisplay();
+        navigateToStep(2, true);
         showResumeStep();
     }
 }
@@ -680,18 +750,25 @@ async function processResume(file) {
         if (data.error) {
             throw new Error(data.error);
         }
-        const skillsFromResume = Array.isArray(data.skills) ? data.skills : [];
-        extractResumeData({
-            name: 'Candidate',
-            education: '',
-            experience: '',
-            skills: skillsFromResume,
-            experience_level: document.getElementById('experience_level').value || 'Beginner',
-            education_level: document.getElementById('education_level').value || 'Graduate'
-        });
+        
+        // Use extracted data from the API
+        const extractedData = {
+            name: data.name || 'Candidate',
+            education: data.education || '',
+            experience: data.experience || '',
+            skills: Array.isArray(data.skills) ? data.skills : [],
+            experience_level: data.experience_level || 'Beginner',
+            education_level: data.education_level || 'Graduate',
+            email: data.email || '',
+            phone: data.phone || ''
+        };
+        
+        console.log('Resume extraction successful:', extractedData);
+        extractResumeData(extractedData);
+        
     } catch (err) {
         console.error('Resume extraction failed:', err);
-        alert('Could not extract skills from the resume. You can continue by adding skills manually.');
+        alert('Could not extract information from the resume. You can continue by adding details manually.');
         // Fall back to manual edit view
         editExtractedData();
         // Restore upload area content to allow retry
@@ -716,18 +793,33 @@ function displayExtractedData(data) {
     // Display extracted information
     extractedInfo.innerHTML = `
         <div class="extracted-field">
-            <strong>Name:</strong> ${data.name}
+            <strong>Name:</strong> ${data.name || 'Not found'}
         </div>
         <div class="extracted-field">
-            <strong>Education:</strong> ${data.education}
+            <strong>Education Level:</strong> ${data.education_level || 'Not detected'}
         </div>
         <div class="extracted-field">
-            <strong>Experience:</strong> ${data.experience}
+            <strong>Experience Level:</strong> ${data.experience_level || 'Not detected'}
         </div>
+        ${data.email ? `<div class="extracted-field">
+            <strong>Email:</strong> ${data.email}
+        </div>` : ''}
+        ${data.phone ? `<div class="extracted-field">
+            <strong>Phone:</strong> ${data.phone}
+        </div>` : ''}
+        ${data.education ? `<div class="extracted-field">
+            <strong>Education Details:</strong> ${data.education}
+        </div>` : ''}
+        ${data.experience ? `<div class="extracted-field">
+            <strong>Experience Details:</strong> ${data.experience}
+        </div>` : ''}
         <div class="extracted-field">
-            <strong>Skills Found:</strong>
+            <strong>Skills Found (${data.skills.length}):</strong>
             <div class="extracted-skills">
-                ${data.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                ${data.skills.length > 0 ? 
+                    data.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('') : 
+                    '<span class="no-skills">No skills detected</span>'
+                }
             </div>
         </div>
         <div class="extracted-actions">
@@ -752,17 +844,13 @@ function useExtractedData() {
         renderSelectedSkills();
         
         // Move to next step
-        currentStep = 3;
-        stepHistory.push(3);
-        updateStepDisplay();
+        navigateToStep(3, true);
     }
 }
 
 function editExtractedData() {
     // Go to manual entry step
-    currentStep = 2;
-    stepHistory = [1, 2];
-    updateStepDisplay();
+    navigateToStep(2, true);
 }
 
 function resetResumeUpload() {
@@ -787,6 +875,24 @@ function resetResumeUpload() {
     
     // Re-attach event listeners
     document.getElementById('resumeFile').addEventListener('change', handleResumeUpload);
+}
+
+// Add method card effects
+function addMethodCardEffects() {
+    const methodCards = document.querySelectorAll('.method-card');
+    methodCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'translateY(0) scale(1)';
+            } else {
+                this.style.transform = 'translateY(-8px) scale(1)';
+            }
+        });
+    });
 }
 
 // Add event listener for sector changes to update skill suggestions

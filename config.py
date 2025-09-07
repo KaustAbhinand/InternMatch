@@ -5,7 +5,7 @@ DEBUG = True
 SECRET_KEY = 'pm-internship-recommendation-engine-2024'
 
 # Recommendation Engine Configuration
-MAX_RECOMMENDATIONS = 5
+MAX_RECOMMENDATIONS = 20  # Increased from 5 to show more internships
 MIN_MATCH_SCORE = 0.1  # Minimum score to include in recommendations
 
 # Scoring Weights

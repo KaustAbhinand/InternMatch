@@ -301,7 +301,7 @@ async function getRecommendations() {
         const candidateProfile = {
             career_goal: currentGoal,
             skills: userSkills,
-            num_recommendations: 5
+            num_recommendations: 20  // Increased from 5 to show more internships
         };
         
         const response = await fetch('/api/recommendations', {

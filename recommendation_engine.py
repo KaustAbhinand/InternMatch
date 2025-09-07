@@ -18,7 +18,10 @@ class InternshipRecommendationEngine:
         self.internships = []
         self.sectors = []
         self.skills = []
-        self.vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+        if HAS_SKLEARN:
+            self.vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+        else:
+            self.vectorizer = None
         self.load_data()
         self.prepare_similarity_matrix()
     
@@ -165,7 +168,7 @@ class InternshipRecommendationEngine:
             return min(max(normalized_score, 0.0), 1.0)
         return 0.0
     
-    def get_recommendations(self, candidate_profile: Dict[str, Any], num_recommendations: int = 5) -> List[Dict[str, Any]]:
+    def get_recommendations(self, candidate_profile: Dict[str, Any], num_recommendations: int = 20) -> List[Dict[str, Any]]:
         """Get personalized internship recommendations for a candidate"""
         if not self.internships:
             return []

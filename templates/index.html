@@ -11,11 +11,10 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <div class="logo">
-                <i class="fas fa-graduation-cap"></i>
-                <h1>PM Internship Scheme</h1>
+            <div class="welcome-message">
+                <h1>Welcome to the PM internship application portal!</h1>
+                <p class="subtitle">Enter your information please.</p>
             </div>
-            <p class="subtitle">Find your perfect internship match</p>
         </header>
 
         <!-- Navigation -->
@@ -68,17 +67,12 @@
         <form id="candidateForm" class="form-container">
             <!-- Step 1: Input Method Selection -->
             <div class="form-step active" id="step1">
-                <div class="step-header">
-                    <h2><i class="fas fa-user"></i> How would you like to get started?</h2>
-                    <p>Choose how you'd like to provide your information</p>
-                </div>
-                
                 <div class="input-method-selection">
                     <div class="method-card" id="manualMethod">
                         <div class="method-icon">
                             <i class="fas fa-edit"></i>
                         </div>
-                        <h3>Manual Entry</h3>
+                        <h3>Enter manually</h3>
                         <p>Fill out the form step by step with your details</p>
                         <button type="button" class="btn-primary" onclick="selectInputMethod('manual')">
                             <i class="fas fa-arrow-right"></i> Start Manual Entry
@@ -89,7 +83,7 @@
                         <div class="method-icon">
                             <i class="fas fa-file-upload"></i>
                         </div>
-                        <h3>Upload Resume</h3>
+                        <h3>Upload resume</h3>
                         <p>Upload your resume and we'll extract your information automatically</p>
                         <button type="button" class="btn-primary" onclick="selectInputMethod('resume')">
                             <i class="fas fa-upload"></i> Upload Resume
@@ -269,6 +263,19 @@
                         <i class="fas fa-laptop"></i>
                         I'm open to remote work
                     </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_recommendations">
+                        <i class="fas fa-list-ol"></i>
+                        Number of Recommendations
+                    </label>
+                    <select id="num_recommendations" name="num_recommendations">
+                        <option value="10">10 internships</option>
+                        <option value="20" selected>20 internships (Recommended)</option>
+                        <option value="30">30 internships</option>
+                        <option value="50">50 internships</option>
+                    </select>
                 </div>
             </div>
 

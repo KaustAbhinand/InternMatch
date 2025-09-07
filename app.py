@@ -80,7 +80,7 @@ def get_recommendations():
         }
         
         # Get recommendations
-        num_recommendations = data.get('num_recommendations', 5)
+        num_recommendations = data.get('num_recommendations', 20)  # Increased from 5 to show more internships
         recommendations = recommendation_engine.get_recommendations(candidate_profile, num_recommendations)
         
         return jsonify({
@@ -126,7 +126,7 @@ def get_skill_suggestions():
 
 @app.route('/api/extract-skills', methods=['POST'])
 def extract_skills_from_resume():
-    """Extract skills from an uploaded resume (PDF/DOCX/TXT)."""
+    """Extract comprehensive data from an uploaded resume (PDF/DOCX/TXT)."""
     try:
         if 'resume' not in request.files:
             return jsonify({'error': 'Missing file field: resume'}), 400
@@ -135,25 +135,43 @@ def extract_skills_from_resume():
         if resume_file.filename == '':
             return jsonify({'error': 'Empty filename'}), 400
 
+        # Validate file type
+        allowed_extensions = ['.pdf', '.docx', '.doc', '.txt']
+        file_extension = os.path.splitext(resume_file.filename)[1].lower()
+        if file_extension not in allowed_extensions:
+            return jsonify({'error': f'Unsupported file type. Allowed: {", ".join(allowed_extensions)}'}), 400
+
         # Save to a temp file to support various parsers
-        suffix = os.path.splitext(resume_file.filename)[1]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp:
             resume_file.save(tmp.name)
             temp_path = tmp.name
 
         try:
             from skill_extractor import ResumeSkillExtractor
             extractor = ResumeSkillExtractor()
-            skills = extractor.extract_skills_from_file(temp_path)
+            
+            # Extract comprehensive data
+            extracted_data = extractor.extract_comprehensive_data(temp_path)
+            
+            # Log extraction results for debugging
+            print(f"Resume extraction results:")
+            print(f"  Skills found: {len(extracted_data['skills'])}")
+            print(f"  Education: {extracted_data['education'][:100]}...")
+            print(f"  Experience: {extracted_data['experience'][:100]}...")
+            print(f"  Name: {extracted_data['name']}")
+            print(f"  Email: {extracted_data['email']}")
+            
+            return jsonify(extracted_data)
+            
         finally:
             try:
                 os.remove(temp_path)
             except Exception:
                 pass
 
-        return jsonify({'skills': skills})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error in resume extraction: {e}")
+        return jsonify({'error': f'Resume processing failed: {str(e)}'}), 500
 
 @app.route('/api/recommendations/from-resume', methods=['POST'])
 def recommendations_from_resume():
@@ -208,7 +226,7 @@ def recommendations_from_resume():
         location_preference = request.form.get('location_preference', '')
         remote_work_preference = parse_bool(request.form.get('remote_work_preference', 'false'))
         experience_level = request.form.get('experience_level', 'Beginner')
-        num_recommendations = int(request.form.get('num_recommendations', '5'))
+        num_recommendations = int(request.form.get('num_recommendations', '20'))
 
         candidate_profile = {
             'education_level': education_level,
@@ -233,6 +251,14 @@ def recommendations_from_resume():
 def get_goal_requirements():
     """Get market-based goal requirements"""
     try:
+        import os
+        import sys
+        
+        # Ensure we're in the correct directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        
         from skill_extractor import SkillExtractor
         
         data = request.get_json()
@@ -244,13 +270,31 @@ def get_goal_requirements():
         # Initialize skill extractor
         extractor = SkillExtractor()
         
+        # Check if data was loaded successfully
+        if not extractor.internships:
+            print(f"Warning: No internship data loaded. Current directory: {os.getcwd()}")
+            print(f"Script directory: {current_dir}")
+            print(f"Data directory exists: {os.path.exists(os.path.join(current_dir, 'data'))}")
+            
+            return jsonify({
+                'error': 'Unable to load internship data. Please check if data files exist.',
+                'fallback': True,
+                'debug_info': {
+                    'current_dir': os.getcwd(),
+                    'script_dir': current_dir,
+                    'data_dir_exists': os.path.exists(os.path.join(current_dir, 'data'))
+                }
+            }), 500
+        
         # Get market-based requirements
         requirements = extractor.get_market_demand_skills(goal)
         
         return jsonify(requirements)
         
+    except ImportError as e:
+        return jsonify({'error': f'Module import error: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/profile', methods=['GET', 'POST'])
 def manage_profile():

@@ -430,7 +430,7 @@ async function getRecommendations() {
             sector_interests: selectedSectors,
             location_preference: document.getElementById('location_preference').value,
             remote_work_preference: document.getElementById('remote_work_preference').checked,
-            num_recommendations: 5
+            num_recommendations: parseInt(document.getElementById('num_recommendations')?.value) || 20
         };
         
         const response = await fetch('/api/recommendations', {

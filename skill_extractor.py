@@ -34,10 +34,26 @@ class SkillExtractor:
     def load_data(self):
         """Load internship data"""
         try:
-            with open('data/internships.json', 'r', encoding='utf-8') as f:
-                self.internships = json.load(f)
-        except FileNotFoundError:
-            print("Error: internships.json not found")
+            # Try multiple possible paths
+            possible_paths = [
+                'data/internships.json',
+                './data/internships.json',
+                os.path.join(os.path.dirname(__file__), 'data', 'internships.json')
+            ]
+            
+            for path in possible_paths:
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        self.internships = json.load(f)
+                        print(f"Successfully loaded data from: {path}")
+                        return
+                except FileNotFoundError:
+                    continue
+            
+            print("Error: internships.json not found in any expected location")
+            self.internships = []
+        except Exception as e:
+            print(f"Error loading data: {e}")
             self.internships = []
     
     def analyze_skills(self):
@@ -225,18 +241,54 @@ class SkillExtractor:
 
 
 class ResumeSkillExtractor:
-    """Extracts skills from uploaded resumes (PDF/DOCX/TXT) by matching against skills list."""
+    """Enhanced resume parser that extracts skills, education, experience, and contact information."""
 
     def __init__(self, skills_list_path: str = 'data/skills.json'):
         self.known_skills = self._load_known_skills(skills_list_path)
         self.normalized_skill_map = self._build_normalized_skill_map(self.known_skills)
+        
+        # Additional skill patterns for better matching
+        self.skill_patterns = self._build_skill_patterns()
+        
+        # Education patterns
+        self.education_patterns = [
+            r'(?i)(bachelor|b\.?s\.?|b\.?e\.?|b\.?tech|b\.?com|b\.?a\.?|b\.?sc)',
+            r'(?i)(master|m\.?s\.?|m\.?tech|m\.?com|m\.?a\.?|m\.?sc|mba)',
+            r'(?i)(phd|ph\.?d\.?|doctorate)',
+            r'(?i)(diploma|certificate|certification)',
+            r'(?i)(high school|secondary|intermediate)'
+        ]
+        
+        # Experience patterns
+        self.experience_patterns = [
+            r'(?i)(experience|work experience|professional experience)',
+            r'(?i)(intern|internship|trainee)',
+            r'(?i)(years? of experience|yrs? of exp)',
+            r'(?i)(fresher|entry level|beginner)'
+        ]
 
     def _load_known_skills(self, path: str) -> List[str]:
         try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return [s.strip() for s in data if isinstance(s, str)]
-        except Exception:
+            # Try multiple possible paths
+            possible_paths = [
+                path,
+                os.path.join(os.path.dirname(__file__), 'data', 'skills.json'),
+                'data/skills.json',
+                './data/skills.json'
+            ]
+            
+            for skill_path in possible_paths:
+                try:
+                    with open(skill_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        return [s.strip() for s in data if isinstance(s, str)]
+                except FileNotFoundError:
+                    continue
+            
+            print(f"Warning: skills.json not found, using empty skills list")
+            return []
+        except Exception as e:
+            print(f"Error loading skills: {e}")
             return []
 
     def _build_normalized_skill_map(self, skills: List[str]) -> Dict[str, str]:
@@ -245,6 +297,21 @@ class ResumeSkillExtractor:
             key = self._normalize_text(skill)
             mapping[key] = skill
         return mapping
+    
+    def _build_skill_patterns(self) -> Dict[str, List[str]]:
+        """Build skill patterns for better matching"""
+        return {
+            'programming': ['python', 'java', 'javascript', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin'],
+            'web_development': ['html', 'css', 'react', 'angular', 'vue', 'node.js', 'django', 'flask', 'express'],
+            'database': ['sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'oracle', 'sqlite'],
+            'cloud': ['aws', 'azure', 'gcp', 'google cloud', 'amazon web services', 'microsoft azure'],
+            'tools': ['git', 'docker', 'kubernetes', 'jenkins', 'ci/cd', 'linux', 'windows'],
+            'data_science': ['machine learning', 'data analysis', 'pandas', 'numpy', 'tensorflow', 'pytorch', 'scikit-learn'],
+            'design': ['photoshop', 'illustrator', 'figma', 'sketch', 'ui/ux', 'user interface', 'user experience'],
+            'marketing': ['digital marketing', 'seo', 'sem', 'social media', 'content marketing', 'email marketing'],
+            'management': ['project management', 'agile', 'scrum', 'leadership', 'team management'],
+            'communication': ['english', 'communication', 'presentation', 'writing', 'public speaking']
+        }
 
     def _normalize_text(self, text: str) -> str:
         text_lower = text.lower()
@@ -252,6 +319,15 @@ class ResumeSkillExtractor:
         text_lower = re.sub(r'[^a-z0-9\s]', ' ', text_lower)
         text_lower = re.sub(r'\s+', ' ', text_lower).strip()
         return text_lower
+    
+    def _clean_text(self, text: str) -> str:
+        """Clean and normalize text for better parsing"""
+        # Remove extra whitespace and normalize line breaks
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\n+', '\n', text)
+        # Remove special characters that might interfere with parsing
+        text = re.sub(r'[^\w\s@.-]', ' ', text)
+        return text.strip()
 
     def _extract_text_from_pdf(self, file_path: str) -> str:
         if not HAS_PYPDF2:
@@ -262,11 +338,17 @@ class ResumeSkillExtractor:
                 reader = PyPDF2.PdfReader(f)
                 for page in reader.pages:
                     try:
-                        text_parts.append(page.extract_text() or '')
-                    except Exception:
+                        page_text = page.extract_text()
+                        if page_text:
+                            # Clean up the text
+                            page_text = self._clean_text(page_text)
+                            text_parts.append(page_text)
+                    except Exception as e:
+                        print(f"Error extracting text from PDF page: {e}")
                         continue
             return '\n'.join(text_parts)
-        except Exception:
+        except Exception as e:
+            print(f"Error reading PDF file: {e}")
             return ''
 
     def _extract_text_from_docx(self, file_path: str) -> str:
@@ -274,8 +356,13 @@ class ResumeSkillExtractor:
             return ''
         try:
             d = docx.Document(file_path)
-            return '\n'.join([p.text for p in d.paragraphs])
-        except Exception:
+            text_parts = []
+            for paragraph in d.paragraphs:
+                if paragraph.text.strip():
+                    text_parts.append(self._clean_text(paragraph.text))
+            return '\n'.join(text_parts)
+        except Exception as e:
+            print(f"Error reading DOCX file: {e}")
             return ''
 
     def _extract_text_from_txt(self, file_path: str) -> str:
@@ -296,28 +383,297 @@ class ResumeSkillExtractor:
     def extract_skills_from_text(self, text: str) -> List[str]:
         if not text:
             return []
-        norm_text = self._normalize_text(text)
+        
         found: Set[str] = set()
-
-        # Match known skills by whole word or phrase presence
+        norm_text = self._normalize_text(text)
+        
+        # 1. Match known skills from skills.json
         for norm_skill, original in self.normalized_skill_map.items():
-            # phrase match using simple containment with word boundaries where possible
-            # Build regex pattern with word boundaries around each token
-            tokens = norm_skill.split(' ')
-            pattern = r'\b' + r'\s+'.join(map(re.escape, tokens)) + r'\b'
-            try:
-                if re.search(pattern, norm_text):
-                    found.add(original)
-            except re.error:
-                # fallback to containment
-                if norm_skill in norm_text:
-                    found.add(original)
-
+            if self._is_skill_match(norm_skill, norm_text):
+                found.add(original)
+        
+        # 2. Match skills from skill patterns
+        for category, skills in self.skill_patterns.items():
+            for skill in skills:
+                if self._is_skill_match(skill, norm_text):
+                    # Convert to proper case for display
+                    proper_skill = self._to_proper_case(skill)
+                    found.add(proper_skill)
+        
+        # 3. Extract additional skills using regex patterns
+        additional_skills = self._extract_additional_skills(text)
+        found.update(additional_skills)
+        
         return sorted(found)
+    
+    def _is_skill_match(self, skill: str, text: str) -> bool:
+        """Check if a skill matches in the text using various methods"""
+        skill_lower = skill.lower()
+        
+        # Direct substring match
+        if skill_lower in text:
+            return True
+        
+        # Word boundary match
+        pattern = r'\b' + re.escape(skill_lower) + r'\b'
+        if re.search(pattern, text):
+            return True
+        
+        # Fuzzy match for common variations
+        skill_variations = self._get_skill_variations(skill_lower)
+        for variation in skill_variations:
+            if variation in text:
+                return True
+        
+        return False
+    
+    def _get_skill_variations(self, skill: str) -> List[str]:
+        """Get common variations of a skill"""
+        variations = [skill]
+        
+        # Common variations
+        if 'javascript' in skill:
+            variations.extend(['js', 'ecmascript'])
+        elif 'python' in skill:
+            variations.extend(['py'])
+        elif 'machine learning' in skill:
+            variations.extend(['ml', 'machinelearning'])
+        elif 'data science' in skill:
+            variations.extend(['datascience', 'data science'])
+        elif 'user interface' in skill:
+            variations.extend(['ui', 'userinterface'])
+        elif 'user experience' in skill:
+            variations.extend(['ux', 'userexperience'])
+        
+        return variations
+    
+    def _to_proper_case(self, text: str) -> str:
+        """Convert text to proper case for display"""
+        return ' '.join(word.capitalize() for word in text.split())
+    
+    def _extract_additional_skills(self, text: str) -> Set[str]:
+        """Extract additional skills using regex patterns"""
+        skills = set()
+        
+        # Programming languages
+        prog_patterns = [
+            r'\b(python|java|javascript|typescript|c\+\+|c#|php|ruby|go|rust|swift|kotlin|scala|r)\b',
+            r'\b(html|css|sass|scss|less)\b',
+            r'\b(react|angular|vue|ember|backbone)\b',
+            r'\b(node\.?js|express|django|flask|spring|laravel|rails)\b'
+        ]
+        
+        for pattern in prog_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                skills.add(self._to_proper_case(match))
+        
+        # Tools and technologies
+        tool_patterns = [
+            r'\b(git|github|gitlab|docker|kubernetes|jenkins|aws|azure|gcp)\b',
+            r'\b(mysql|postgresql|mongodb|redis|elasticsearch)\b',
+            r'\b(linux|ubuntu|centos|windows|macos)\b'
+        ]
+        
+        for pattern in tool_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                skills.add(match.upper() if match.upper() in ['AWS', 'GCP', 'API', 'SQL'] else self._to_proper_case(match))
+        
+        return skills
 
     def extract_skills_from_file(self, file_path: str) -> List[str]:
         text = self.extract_text(file_path)
         return self.extract_skills_from_text(text)
+    
+    def extract_comprehensive_data_from_text(self, text: str) -> Dict[str, Any]:
+        """Extract comprehensive data from resume text (for testing)"""
+        if not text:
+            return {
+                'skills': [],
+                'education': '',
+                'experience': '',
+                'name': '',
+                'email': '',
+                'phone': '',
+                'experience_level': 'Beginner',
+                'education_level': 'Graduate'
+            }
+        
+        return {
+            'skills': self.extract_skills_from_text(text),
+            'education': self.extract_education(text),
+            'experience': self.extract_experience(text),
+            'name': self.extract_name(text),
+            'email': self.extract_email(text),
+            'phone': self.extract_phone(text),
+            'experience_level': self.determine_experience_level(text),
+            'education_level': self.determine_education_level(text)
+        }
+    
+    def extract_comprehensive_data(self, file_path: str) -> Dict[str, Any]:
+        """Extract comprehensive data from resume including skills, education, experience, and contact info"""
+        text = self.extract_text(file_path)
+        if not text:
+            return {
+                'skills': [],
+                'education': '',
+                'experience': '',
+                'name': '',
+                'email': '',
+                'phone': '',
+                'experience_level': 'Beginner',
+                'education_level': 'Graduate'
+            }
+        
+        return {
+            'skills': self.extract_skills_from_text(text),
+            'education': self.extract_education(text),
+            'experience': self.extract_experience(text),
+            'name': self.extract_name(text),
+            'email': self.extract_email(text),
+            'phone': self.extract_phone(text),
+            'experience_level': self.determine_experience_level(text),
+            'education_level': self.determine_education_level(text)
+        }
+    
+    def extract_education(self, text: str) -> str:
+        """Extract education information from resume text"""
+        education_sections = []
+        
+        # Look for education section
+        education_keywords = ['education', 'academic', 'qualification', 'degree', 'university', 'college']
+        lines = text.split('\n')
+        
+        in_education_section = False
+        for i, line in enumerate(lines):
+            line_lower = line.lower().strip()
+            
+            # Check if this line indicates start of education section
+            if any(keyword in line_lower for keyword in education_keywords):
+                in_education_section = True
+                continue
+            
+            # If we're in education section, collect relevant lines
+            if in_education_section:
+                if line.strip() and not any(keyword in line_lower for keyword in ['experience', 'work', 'skills', 'projects']):
+                    education_sections.append(line.strip())
+                elif any(keyword in line_lower for keyword in ['experience', 'work', 'skills', 'projects']):
+                    break
+        
+        # If no education section found, look for degree patterns
+        if not education_sections:
+            for line in lines:
+                for pattern in self.education_patterns:
+                    if re.search(pattern, line, re.IGNORECASE):
+                        education_sections.append(line.strip())
+                        break
+        
+        return ' | '.join(education_sections[:3])  # Return top 3 education entries
+    
+    def extract_experience(self, text: str) -> str:
+        """Extract work experience information from resume text"""
+        experience_sections = []
+        
+        # Look for experience section
+        experience_keywords = ['experience', 'work', 'employment', 'career', 'professional']
+        lines = text.split('\n')
+        
+        in_experience_section = False
+        for i, line in enumerate(lines):
+            line_lower = line.lower().strip()
+            
+            # Check if this line indicates start of experience section
+            if any(keyword in line_lower for keyword in experience_keywords):
+                in_experience_section = True
+                continue
+            
+            # If we're in experience section, collect relevant lines
+            if in_experience_section:
+                if line.strip() and not any(keyword in line_lower for keyword in ['education', 'skills', 'projects', 'certification']):
+                    experience_sections.append(line.strip())
+                elif any(keyword in line_lower for keyword in ['education', 'skills', 'projects', 'certification']):
+                    break
+        
+        return ' | '.join(experience_sections[:3])  # Return top 3 experience entries
+    
+    def extract_name(self, text: str) -> str:
+        """Extract candidate name from resume text"""
+        lines = text.split('\n')
+        
+        # Usually the name is in the first few lines
+        for line in lines[:5]:
+            line = line.strip()
+            if len(line) > 2 and len(line) < 50:
+                # Check if it looks like a name (contains letters and spaces, no special chars)
+                if re.match(r'^[A-Za-z\s\.]+$', line) and not any(word in line.lower() for word in ['resume', 'cv', 'curriculum', 'vitae']):
+                    return line
+        
+        return 'Candidate'
+    
+    def extract_email(self, text: str) -> str:
+        """Extract email address from resume text"""
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        matches = re.findall(email_pattern, text)
+        return matches[0] if matches else ''
+    
+    def extract_phone(self, text: str) -> str:
+        """Extract phone number from resume text"""
+        phone_patterns = [
+            r'\b\d{10}\b',  # 10 digit number
+            r'\b\+91[\s-]?\d{10}\b',  # Indian mobile
+            r'\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b',  # US format
+            r'\b\(\d{3}\)[\s-]?\d{3}[\s-]?\d{4}\b'  # US format with parentheses
+        ]
+        
+        for pattern in phone_patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                return matches[0]
+        
+        return ''
+    
+    def determine_experience_level(self, text: str) -> str:
+        """Determine experience level based on resume content"""
+        text_lower = text.lower()
+        
+        # Check for specific experience indicators
+        if any(word in text_lower for word in ['fresher', 'entry level', 'recent graduate', 'new graduate']):
+            return 'Beginner'
+        
+        # Look for years of experience
+        years_pattern = r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?experience'
+        years_matches = re.findall(years_pattern, text_lower)
+        
+        if years_matches:
+            years = int(years_matches[0])
+            if years >= 3:
+                return 'Advanced'
+            elif years >= 1:
+                return 'Intermediate'
+        
+        # Check for senior positions
+        if any(word in text_lower for word in ['senior', 'lead', 'manager', 'director', 'head']):
+            return 'Advanced'
+        
+        # Check for intern positions
+        if any(word in text_lower for word in ['intern', 'internship', 'trainee']):
+            return 'Beginner'
+        
+        return 'Beginner'  # Default to beginner
+    
+    def determine_education_level(self, text: str) -> str:
+        """Determine education level based on resume content"""
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in ['phd', 'ph.d', 'doctorate', 'doctoral']):
+            return 'PhD'
+        elif any(word in text_lower for word in ['master', 'm.s', 'm.tech', 'mba', 'm.com', 'm.a', 'm.sc']):
+            return 'Post Graduate'
+        elif any(word in text_lower for word in ['bachelor', 'b.s', 'b.tech', 'b.com', 'b.a', 'b.sc', 'b.e', 'bca']):
+            return 'Graduate'
+        else:
+            return 'Graduate'  # Default to graduate
 
 # Test the skill extractor
 if __name__ == '__main__':

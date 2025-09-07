@@ -7,6 +7,7 @@ Simple runner script to start the application
 import os
 import sys
 from app import app
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 def main():
     """Main function to run the application"""
